@@ -100,9 +100,13 @@
   function animateScore(ring) {
     const target = Number(ring.dataset.score);
 
+    const setScore = (value) => {
+      ring.style.setProperty('--p', value);
+      ring.textContent = value;
+    };
+
     if (prefersReducedMotion) {
-      ring.style.setProperty('--p', target);
-      ring.textContent = target;
+      setScore(target);
       return;
     }
 
@@ -111,8 +115,7 @@
       if (start === null) start = now;
       const t = Math.min((now - start) / SCORE_ANIMATION_MS, 1);
       const value = Math.round(target * (1 - (1 - t) ** 3)); // ease-out cubic
-      ring.style.setProperty('--p', value);
-      ring.textContent = value;
+      setScore(value);
       if (t < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -153,12 +156,6 @@
       log.scrollTop = log.scrollHeight;
     };
 
-    const reset = () => {
-      log.replaceChildren();
-      report.classList.remove('show');
-      bar.style.width = '0%';
-    };
-
     const finish = () => {
       setStatus('● прогон завершён', 'done');
       bar.style.width = '100%';
@@ -168,8 +165,12 @@
       runButton.textContent = 'Запустить снова';
     };
 
-    const run = () => {
-      reset();
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    const run = async () => {
+      log.replaceChildren();
+      report.classList.remove('show');
+      bar.style.width = '0%';
       runButton.disabled = true;
       runButton.textContent = 'Выполняется…';
       setStatus('● running', 'running');
@@ -180,18 +181,13 @@
         return;
       }
 
-      let shown = 0;
-      const tick = () => {
-        if (shown === ATTEMPTS.length) {
-          setTimeout(finish, FINISH_DELAY_MS);
-          return;
-        }
-        appendLogLine(ATTEMPTS[shown]);
-        shown += 1;
-        bar.style.width = `${Math.round((shown / ATTEMPTS.length) * PROGRESS_BEFORE_FINISH)}%`;
-        setTimeout(tick, ATTEMPT_DELAY_MS);
-      };
-      tick();
+      for (const [index, attempt] of ATTEMPTS.entries()) {
+        appendLogLine(attempt);
+        bar.style.width = `${Math.round(((index + 1) / ATTEMPTS.length) * PROGRESS_BEFORE_FINISH)}%`;
+        await wait(ATTEMPT_DELAY_MS);
+      }
+      await wait(FINISH_DELAY_MS);
+      finish();
     };
 
     runButton.addEventListener('click', run);
@@ -229,7 +225,7 @@
   const REVEAL_STAGGER_GROUP = 3; // delay restarts every N siblings, i.e. once per grid row
 
   function initScrollReveal() {
-    const items = [...document.querySelectorAll('[data-reveal]')];
+    const items = document.querySelectorAll('[data-reveal]');
 
     if (!('IntersectionObserver' in window)) {
       items.forEach((item) => item.removeAttribute('data-reveal'));
@@ -289,14 +285,14 @@
     });
   }
 
-  const RAIN_GLYPHS = [...'01{}[]<>/\\=+-*#$%&;:ABCDEFabcdef'];
+  const RAIN_GLYPHS = '01{}[]<>/\\=+-*#$%&;:ABCDEFabcdef';
   const RAIN_FONT_PX = 16;
   const RAIN_FRAME_MS = 60;
   const RAIN_ALERT_CHANCE = 0.03; // share of glyphs drawn in red (attack) instead of green
 
   function initCodeRain() {
     const canvas = document.querySelector('.hero-rain');
-    const ctx = canvas && canvas.getContext('2d');
+    const ctx = canvas?.getContext('2d');
     if (!ctx) return;
 
     let columns = [];
