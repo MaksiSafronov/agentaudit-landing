@@ -1,0 +1,1627 @@
+/* ==========================================================================
+   AgentAudit landing
+
+   1. Tokens          7. Console / demo
+   2. Base            8. Sections (problem, steps, features, safety)
+   3. Layout          9. CTA form and footer
+   4. Header         10. Motion
+   5. Buttons        11. Responsive (all breakpoints live here)
+   6. Hero
+
+   Single dark "terminal" theme on purpose: green = defense, red = attack.
+   ========================================================================== */
+
+/* 1. Tokens ---------------------------------------------------------------- */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #06090a;
+  --surface: #0b1210;
+  --surface-2: #0e1714;
+  --border: #1b3322;
+
+  --fg: #e2f7e8;
+  --muted: #88a894;
+  --faint: #6f8f7b;
+  --line-dim: #33493b;
+
+  --green: #2ef06a;
+  --green-ink: #04140a;
+  --green-dim: #14301e;
+  --red: #ff4242;
+  --amber: #f0a838;
+
+  --console-bg: #04070a;
+  --console-bar: #080d0c;
+  --log-bg: #02060a;
+  --track-bg: #0e1a14;
+
+  --glow-green: 0 0 28px rgba(46, 240, 106, 0.22);
+  --glow-red: 0 0 26px rgba(255, 66, 66, 0.28);
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+
+  --maxw: 1120px;
+  --gutter: 20px;
+  --radius: 14px;
+  --radius-sm: 12px;
+  --header-offset: 80px;
+
+  --font-sans: "IBM Plex Sans", system-ui, "Segoe UI", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* Animatable custom properties (score ring fill, rotating CTA border). */
+@property --p {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 72;
+}
+
+@property --angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* 2. Base ------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--header-offset);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint terminal scanlines. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(46, 240, 106, 0.035) 0 1px, transparent 1px 3px);
+  mix-blend-mode: screen;
+}
+
+/* Keeps content out from under the notch in landscape / standalone mode. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 21;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--bg);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: -999px;
+  z-index: 100;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--green);
+  color: var(--green-ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 16px;
+}
+
+/* 3. Layout ---------------------------------------------------------------- */
+
+.wrap {
+  position: relative;
+  z-index: 2;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)) max(var(--gutter), env(safe-area-inset-right, 0px));
+}
+
+/* Clips the off-screen start position of side-reveal cards (no horizontal scroll). */
+main {
+  overflow-x: clip;
+}
+
+section {
+  position: relative;
+  z-index: 2;
+  padding-block: clamp(48px, 8vw, 92px);
+}
+
+.band {
+  background: var(--surface);
+  border-block: 1px solid var(--border);
+}
+
+.sec-head {
+  max-width: 62ch;
+  margin-bottom: clamp(28px, 5vw, 44px);
+}
+
+.sec-head h2 {
+  font-size: clamp(1.7rem, 4vw, 2.7rem);
+  letter-spacing: -0.015em;
+}
+
+.sec-head p {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.eyebrow {
+  margin: 0 0 14px;
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  content: "> ";
+  opacity: 0.7;
+}
+
+.cursor {
+  display: inline-block;
+  width: 0.6ch;
+  height: 1.05em;
+  margin-left: 2px;
+  background: var(--green);
+  box-shadow: var(--glow-green);
+  vertical-align: -0.12em;
+}
+
+/* 4. Header ---------------------------------------------------------------- */
+
+header.site {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 20;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-block: 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.brand .mark {
+  color: var(--green);
+  text-shadow: var(--glow-green);
+}
+
+.nav-links {
+  display: flex;
+  gap: 26px;
+  margin-left: auto;
+}
+
+.nav-links a {
+  position: relative;
+  padding-block: 4px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--green);
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 2px;
+  background: var(--green);
+  box-shadow: var(--glow-green);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 0.3s ease;
+}
+
+.nav-links a:hover::after,
+.nav-links a.active::after {
+  transform: scaleX(1);
+}
+
+.nav-links__cta {
+  display: none;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Burger button: only shown when JS is available and the links collapse. */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+}
+
+.nav-toggle:hover {
+  border-color: var(--green);
+}
+
+.nav-toggle__bar,
+.nav-toggle__bar::before,
+.nav-toggle__bar::after {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.nav-toggle__bar {
+  position: relative;
+}
+
+.nav-toggle__bar::before,
+.nav-toggle__bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.nav-toggle__bar::before {
+  top: -6px;
+}
+
+.nav-toggle__bar::after {
+  top: 6px;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle__bar {
+  background: transparent;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle__bar::before {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle__bar::after {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* 5. Buttons --------------------------------------------------------------- */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  padding: 13px 24px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Shine sweep on hover. */
+.btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.btn:hover::before {
+  left: 130%;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: var(--green-ink);
+  box-shadow: var(--glow-green);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--green);
+}
+
+.btn-ghost:hover {
+  border-color: var(--green);
+  box-shadow: var(--glow-green);
+}
+
+.btn-lg {
+  padding: 16px 30px;
+  font-size: 1rem;
+}
+
+/* 6. Hero ------------------------------------------------------------------ */
+
+.hero {
+  overflow: hidden;
+  padding-block: clamp(40px, 9vw, 104px);
+}
+
+.hero-rain {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.5;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse at 70% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse at 70% 40%, #000 0%, transparent 72%);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 56px;
+  align-items: center;
+}
+
+/* Grid children must be allowed to shrink, otherwise the console overflows. */
+.hero-grid > * {
+  min-width: 0;
+}
+
+.hero h1 {
+  font-size: clamp(2.1rem, 6vw, 4rem);
+  letter-spacing: -0.02em;
+  text-shadow: var(--glow-green);
+  overflow-wrap: break-word;
+}
+
+.hero h1 .hl {
+  display: inline-block;
+  color: var(--red);
+  text-shadow: var(--glow-red);
+}
+
+.hero .lede {
+  max-width: 36ch;
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: clamp(1.05rem, 2.4vw, 1.3rem);
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 34px;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin-top: 30px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.hero-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: var(--glow-green);
+}
+
+/* 7. Console / demo -------------------------------------------------------- */
+
+.console {
+  position: relative;
+  overflow: hidden;
+  background: var(--console-bg);
+  color: #d7f3e0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.console-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  background: var(--console-bar);
+  border-bottom: 1px solid var(--border);
+}
+
+.console-bar .tl {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #1d2a22;
+}
+
+.console-bar .tl:nth-child(1) {
+  background: var(--red);
+  opacity: 0.7;
+}
+
+.console-bar .tl:nth-child(2) {
+  background: var(--amber);
+  opacity: 0.6;
+}
+
+.console-bar .tl:nth-child(3) {
+  background: var(--green);
+  opacity: 0.6;
+}
+
+.console-bar .url {
+  flex: 1;
+  min-width: 0;
+  margin-left: 8px;
+  overflow: hidden;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.console-body {
+  padding: 22px;
+}
+
+.pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.pipeline .atk {
+  color: var(--red);
+}
+
+.pipeline .judge,
+.pipeline .out {
+  color: var(--green);
+}
+
+.pipeline .arrow {
+  display: inline-block;
+  color: var(--line-dim);
+}
+
+.run-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.run-head .rid {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+}
+
+.status {
+  padding: 4px 11px;
+  border: 1px solid var(--green-dim);
+  border-radius: 999px;
+  background: rgba(46, 240, 106, 0.12);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--track-bg);
+}
+
+.bar-fill {
+  position: relative;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--green);
+  box-shadow: var(--glow-green);
+  transition: width 0.3s ease;
+}
+
+.log {
+  height: 184px;
+  padding: 14px 16px;
+  overflow: hidden;
+  background: var(--log-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.95;
+}
+
+.log .ln {
+  display: flex;
+  gap: 10px;
+}
+
+.log .ln .n {
+  color: var(--faint);
+}
+
+.log .ln .s {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+
+.v-ok {
+  color: var(--green);
+}
+
+.v-part {
+  color: var(--amber);
+}
+
+.v-leak {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.report {
+  display: none;
+  margin-top: 16px;
+}
+
+.report.show {
+  display: block;
+}
+
+/* Static report in the "interface" section sits right under the header row. */
+.run-head + .report {
+  margin-top: 6px;
+}
+
+.report-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+}
+
+.score-ring {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, var(--console-bg) 77%, transparent 78%),
+    conic-gradient(var(--green) 0 calc(var(--p) * 1%), var(--red) calc(var(--p) * 1%) 100%);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.rt-text b {
+  display: block;
+  font-size: 1rem;
+}
+
+.rt-text span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.findings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.finding {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.sev {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.sev.high {
+  background: var(--red);
+  color: #fff;
+}
+
+.sev.med {
+  background: var(--amber);
+  color: #201603;
+}
+
+.sev.ok {
+  background: rgba(46, 240, 106, 0.16);
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+}
+
+.demo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.demo-run {
+  padding: 12px 22px;
+  font-size: 0.9rem;
+}
+
+.demo-run:disabled {
+  box-shadow: none;
+  opacity: 0.5;
+  animation: none;
+  cursor: default;
+}
+
+.demo-hint {
+  align-self: center;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+/* 8. Sections -------------------------------------------------------------- */
+
+/* Shared card surface. */
+.prob-card,
+.step,
+.feat,
+.pledge {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.prob-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.prob-card {
+  padding: 28px;
+  border-radius: var(--radius-sm);
+}
+
+.prob-card.attack {
+  border-left: 3px solid var(--red);
+}
+
+.prob-card.defend {
+  border-left: 3px solid var(--green);
+}
+
+.prob-card h3 {
+  margin-bottom: 10px;
+  font-size: 1.15rem;
+}
+
+.prob-card p {
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+.prob-card .k {
+  display: block;
+  margin-bottom: 14px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.prob-card.attack .k {
+  color: var(--red);
+}
+
+.prob-card.defend .k {
+  color: var(--green);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  padding: 30px 28px;
+  border-radius: var(--radius-sm);
+}
+
+.step .num {
+  display: inline-block;
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.step h3 {
+  margin: 14px 0 10px;
+  font-size: 1.2rem;
+}
+
+.step p {
+  color: var(--muted);
+  font-size: 0.97rem;
+}
+
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.feat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 26px;
+  border-radius: var(--radius-sm);
+}
+
+.feat .ic {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.feat .ic svg {
+  width: 22px;
+  height: 22px;
+}
+
+.feat h3 {
+  font-size: 1.08rem;
+}
+
+.feat p {
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.safety-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.safety-grid > * {
+  min-width: 0;
+}
+
+.safety-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.safety-item {
+  display: flex;
+  gap: 14px;
+}
+
+.safety-item .chk {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--green);
+  font-family: var(--font-mono);
+}
+
+.safety-item b {
+  display: block;
+}
+
+.safety-item span {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.pledge {
+  padding: 26px 28px;
+  border-left: 3px solid var(--green);
+  border-radius: 10px;
+  box-shadow: var(--glow-green);
+}
+
+.pledge p {
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.pledge .mono {
+  margin-top: 12px;
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+/* Cards: cursor spotlight and hover state. */
+.step,
+.feat {
+  position: relative;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.step::before,
+.feat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(46, 240, 106, 0.14), transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.step:hover,
+.feat:hover {
+  border-color: var(--green);
+  box-shadow: var(--glow-green);
+}
+
+.step:hover::before,
+.feat:hover::before {
+  opacity: 1;
+}
+
+.step .num {
+  transition: transform 0.3s ease, text-shadow 0.3s ease;
+}
+
+.step:hover .num {
+  transform: scale(1.25);
+  text-shadow: var(--glow-green);
+}
+
+.feat .ic {
+  transition: transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1), background 0.25s ease, color 0.25s ease;
+}
+
+.feat:hover .ic {
+  background: var(--green);
+  color: var(--green-ink);
+  transform: rotate(-8deg) scale(1.15);
+}
+
+/* 9. CTA form and footer --------------------------------------------------- */
+
+.cta-box {
+  position: relative;
+  isolation: isolate;
+  max-width: 640px;
+  margin-inline: auto;
+  padding: 40px 28px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+}
+
+.cta-box h2 {
+  font-size: clamp(1.8rem, 4.5vw, 2.9rem);
+  letter-spacing: -0.02em;
+  text-shadow: var(--glow-green);
+}
+
+.cta-box p {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+
+.cta-form {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.cta-form .field {
+  flex: 1;
+  min-width: min(240px, 100%);
+  max-width: 360px;
+  text-align: left;
+}
+
+.cta-form label {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cta-form input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.cta-form input::placeholder {
+  color: var(--faint);
+}
+
+.cta-form input:focus {
+  border-color: var(--green);
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+
+.form-note {
+  min-height: 1.3em;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.form-note.ok {
+  color: var(--green);
+}
+
+.form-note.err {
+  color: var(--red);
+}
+
+footer.site {
+  position: relative;
+  z-index: 2;
+  padding-block: 40px;
+  border-top: 1px solid var(--border);
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 40px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+}
+
+.foot .brand {
+  color: var(--fg);
+}
+
+/* 10. Motion ---------------------------------------------------------------
+   Everything below is decoration. Content stays visible without JS and under
+   prefers-reduced-motion; scroll-reveal is gated by the .motion class that
+   script.js adds only when motion is allowed. */
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 50;
+  height: 3px;
+  background: linear-gradient(90deg, var(--green), #9dffbb);
+  box-shadow: var(--glow-green);
+  transform: scaleX(var(--scroll, 0));
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+/* Hero */
+
+.cursor {
+  animation: blink 1.1s step-end infinite;
+}
+
+.hero h1 .hl {
+  animation: glitch 5s infinite;
+}
+
+.hero-meta .dot {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+.hero-meta span:nth-child(2) .dot {
+  animation-delay: 0.3s;
+}
+
+.hero-meta span:nth-child(3) .dot {
+  animation-delay: 0.6s;
+}
+
+.brand .mark {
+  animation: mark-flicker 6s steps(1) infinite;
+}
+
+.btn-primary {
+  animation: pulse-glow 2.8s ease-in-out infinite;
+}
+
+/* Console */
+
+.console {
+  animation: float 7s ease-in-out infinite;
+}
+
+.console::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  height: 60px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, transparent, rgba(46, 240, 106, 0.1), transparent);
+  animation: scan 4.5s linear infinite;
+  pointer-events: none;
+}
+
+/* Only the hero console floats; the static report stays put. */
+#demo .console,
+#demo .console::after {
+  animation: none;
+}
+
+.pipeline .arrow {
+  animation: flow 1.6s ease-in-out infinite;
+}
+
+.pipeline .arrow:nth-of-type(2) {
+  animation-delay: 0.25s;
+}
+
+.pipeline .arrow:nth-of-type(3) {
+  animation-delay: 0.5s;
+}
+
+.status.running {
+  animation: blink-soft 1s ease-in-out infinite;
+}
+
+.bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 1.2s linear infinite;
+}
+
+.log .ln {
+  animation: slide-in 0.35s ease both;
+}
+
+.report.show {
+  animation: pop-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.report.show .finding {
+  animation: slide-in 0.45s ease both;
+}
+
+.report.show .finding:nth-child(1) {
+  animation-delay: 0.35s;
+}
+
+.report.show .finding:nth-child(2) {
+  animation-delay: 0.55s;
+}
+
+.report.show .finding:nth-child(3) {
+  animation-delay: 0.75s;
+}
+
+.sev.high {
+  animation: sev-alarm 1.6s ease-in-out infinite;
+}
+
+/* CTA: rotating glow border. */
+
+.cta-box::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--angle), transparent 0 60%, var(--green) 80%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-border 6s linear infinite;
+}
+
+/* Scroll reveal. script.js removes data-reveal once the element is shown, so
+   the card hover transitions above take over afterwards. */
+
+.motion [data-reveal] {
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.7s ease;
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.motion [data-reveal]:not(.is-visible) {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(32px) scale(0.98);
+}
+
+.motion [data-reveal="left"]:not(.is-visible) {
+  transform: translateX(-40px);
+}
+
+.motion [data-reveal="right"]:not(.is-visible) {
+  transform: translateX(40px);
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes blink-soft {
+  50% { opacity: 0.45; }
+}
+
+@keyframes glitch {
+  0%, 92%, 100% { transform: none; text-shadow: var(--glow-red); }
+  93% { transform: translate(-2px, 1px) skewX(-4deg); text-shadow: 2px 0 var(--green), -2px 0 #4aa8ff; }
+  95% { transform: translate(2px, -1px) skewX(3deg); text-shadow: -2px 0 var(--green), 2px 0 #4aa8ff; }
+  97% { transform: translate(-1px, 0); text-shadow: var(--glow-red); }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.55; }
+}
+
+@keyframes mark-flicker {
+  0%, 94%, 100% { opacity: 1; }
+  95% { opacity: 0.3; }
+  96% { opacity: 1; }
+  97% { opacity: 0.5; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 18px rgba(46, 240, 106, 0.22); }
+  50% { box-shadow: 0 0 36px rgba(46, 240, 106, 0.5); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes scan {
+  from { transform: translateY(-60px); }
+  to { transform: translateY(520px); }
+}
+
+@keyframes flow {
+  0%, 100% { color: var(--line-dim); transform: translateX(0); }
+  50% { color: var(--green); transform: translateX(4px); }
+}
+
+@keyframes shimmer {
+  to { transform: translateX(100%); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sev-alarm {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 66, 66, 0.6); }
+  50% { box-shadow: 0 0 0 7px rgba(255, 66, 66, 0); }
+}
+
+@keyframes spin-border {
+  to { --angle: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0s !important;
+  }
+
+  .scroll-progress,
+  .hero-rain {
+    display: none;
+  }
+}
+
+/* 11. Responsive -----------------------------------------------------------
+   Breakpoints (max-width), from wide to narrow:
+   1100  tighter header spacing
+    960  links collapse into a burger, hero/safety stack, 2-col features
+    720  steps become a vertical list, problem cards stack
+    560  single-column features, compact header and console
+    380  smallest phones                                                    */
+
+@media (max-width: 1100px) {
+  .nav {
+    gap: 16px;
+  }
+
+  .nav-links {
+    gap: 18px;
+  }
+
+  .hero-grid {
+    gap: 36px;
+  }
+}
+
+@media (max-width: 960px) {
+  :root {
+    --header-offset: 72px;
+  }
+
+  /* Without JS the links simply wrap onto a second row. */
+  .nav {
+    flex-wrap: wrap;
+  }
+
+  .nav-links {
+    order: 3;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-left: 0;
+  }
+
+  .nav-actions {
+    margin-left: auto;
+  }
+
+  /* With JS the links become a drop-down panel under the header. */
+  .js .nav {
+    flex-wrap: nowrap;
+  }
+
+  .js .nav-toggle {
+    display: inline-flex;
+  }
+
+  .js .nav-links {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    padding: 8px max(var(--gutter), env(safe-area-inset-right, 0px)) 16px max(var(--gutter), env(safe-area-inset-left, 0px));
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .js .nav-links.is-open {
+    display: flex;
+  }
+
+  .js .nav-links a {
+    padding-block: 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 1rem;
+  }
+
+  .js .nav-links a::after {
+    display: none;
+  }
+
+  .hero-grid,
+  .safety-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-grid {
+    gap: 40px;
+  }
+
+  .safety-grid {
+    gap: 28px;
+  }
+
+  .hero .lede {
+    max-width: 52ch;
+  }
+
+  /* Console keeps a readable line length instead of stretching edge to edge. */
+  .hero .console {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .feat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .step {
+    padding: 26px 22px;
+  }
+}
+
+@media (max-width: 720px) {
+  .prob-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Number sits to the left of the text instead of above it. */
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 18px;
+    align-items: start;
+  }
+
+  .step .num {
+    grid-row: 1 / span 2;
+    padding-top: 2px;
+  }
+
+  .step h3 {
+    margin: 0 0 8px;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  body {
+    font-size: 16px;
+  }
+
+  .nav {
+    padding-block: 10px;
+  }
+
+  .nav-cta {
+    display: none;
+  }
+
+  .nav-links__cta {
+    display: block;
+    color: var(--green);
+  }
+
+  .feat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-cta .btn {
+    flex: 1 1 100%;
+  }
+
+  .console-body {
+    padding: 16px;
+  }
+
+  .console-bar {
+    padding: 11px 14px;
+  }
+
+  .run-head {
+    flex-wrap: wrap;
+  }
+
+  .cta-box {
+    padding: 28px 16px;
+  }
+
+  .cta-form .field {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .cta-form .btn {
+    flex: 1 1 100%;
+  }
+
+  .foot {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 380px) {
+  .step {
+    display: block;
+  }
+
+  .step h3 {
+    margin: 12px 0 8px;
+  }
+
+  .score-ring {
+    width: 72px;
+    height: 72px;
+    font-size: 1.4rem;
+  }
+
+  .log {
+    font-size: 0.78rem;
+  }
+
+  .pipeline {
+    font-size: 0.76rem;
+  }
+}
