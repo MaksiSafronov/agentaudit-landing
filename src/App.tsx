@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { ExternalLink, History, LayoutDashboard, Plus, Terminal } from 'lucide-react'
+import { ExternalLink, History, LayoutDashboard, Plus } from 'lucide-react'
 import { NavLink, Outlet, Route, Routes, useLocation } from 'react-router'
-import { useAppDispatch, useAppSelector, settleDue } from './features/audits/state'
 import { OverviewPage } from './pages/OverviewPage'
 import { NewAuditPage } from './pages/NewAuditPage'
 import { HistoryPage } from './pages/HistoryPage'
@@ -17,22 +16,9 @@ function Workspace() {
   const { pathname } = useLocation()
   const main = useRef<HTMLElement>(null)
   const previousPath = useRef(pathname)
-  const dispatch = useAppDispatch()
-  const nextFinish = useAppSelector(({ audits }) => audits.reduce(
-    (earliest, run) => run.status === 'running' ? Math.min(earliest, run.finishesAt) : earliest,
-    Infinity,
-  ))
-
-  useEffect(() => {
-    if (!Number.isFinite(nextFinish)) return
-    const finish = () => dispatch(settleDue(Math.max(Date.now(), nextFinish)))
-    const timer = window.setTimeout(finish, Math.max(0, nextFinish - Date.now()))
-    return () => window.clearTimeout(timer)
-  }, [dispatch, nextFinish])
-
   useEffect(() => {
     const title = main.current?.querySelector('h1')?.textContent
-    document.title = title ? `${title} · AgentAudit` : 'AgentAudit'
+    document.title = title ? `${title} · Ag3ntAud1t` : 'Ag3ntAud1t'
   }, [pathname])
 
   useEffect(() => {
@@ -49,8 +35,7 @@ function Workspace() {
     }}>К содержимому</a>
     <aside className="sidebar">
       <NavLink to="/" className="brand" aria-label="AgentAudit, обзор">
-        <span className="brand-mark"><Terminal size={20} aria-hidden="true" /></span>
-        AgentAudit
+        <span className="brand-terminal"><span aria-hidden="true">&gt;</span>Ag3ntAud1t<span className="brand-terminal-cursor" aria-hidden="true" /></span>
       </NavLink>
       <nav className="navigation" aria-label="Кабинет">
         {navigation.map(({ to, label, Icon }) => <NavLink key={to} to={to} end={to === '/'}>

@@ -1,7 +1,6 @@
-import { configureStore, createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
+import { configureStore, createAsyncThunk, createListenerMiddleware, createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
 import { useDispatch, useSelector } from 'react-redux'
-import { demoRuns } from './fixtures'
-import { isScenarioId, type AuditInput, type AuditRun } from './model'
+import { isScenarioId, validateConfiguration, type AuditInput, type AuditRun } from './model'
 
 export const storageKey = 'agentaudit:runs:v1'
 export const mockDuration = 1800
@@ -16,6 +15,10 @@ function isAuditRun(value: unknown): value is AuditRun {
 
   return typeof run.id === 'string' && typeof run.agent === 'string' && isScenarioId(run.scenario)
     && (run.status === 'running' || run.status === 'completed' || run.status === 'failed')
+    && typeof run.endpoint === 'string' && typeof run.description === 'string'
+    && (run.vector === undefined || typeof run.vector === 'string')
+    && (run.criterion === undefined || typeof run.criterion === 'string')
+    && !Object.values(validateConfiguration(run.endpoint, run.description, run.scenario, run.vector ?? '', run.criterion ?? '')).some(Boolean)
     && typeof run.simulateError === 'boolean' && isTimestamp(run.startedAt) && isTimestamp(run.finishesAt)
 }
 
@@ -24,11 +27,22 @@ type StorageAdapter = Pick<Storage, 'getItem' | 'setItem'>
 function readRuns(storage?: StorageAdapter): AuditRun[] {
   try {
     const raw = storage?.getItem(storageKey)
-    if (raw == null) return demoRuns
+    if (raw == null) return []
     const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) && parsed.every(isAuditRun) ? parsed : demoRuns
+    if (!Array.isArray(parsed)) return []
+    const runs = parsed.filter(isAuditRun)
+    if (runs.length !== parsed.length) saveRuns(storage, runs)
+    return runs
   } catch {
-    return demoRuns
+    return []
+  }
+}
+
+function saveRuns(storage: StorageAdapter | undefined, runs: AuditRun[]) {
+  try {
+    storage?.setItem(storageKey, JSON.stringify(runs))
+  } catch {
+    // Keep the workspace usable when local storage is unavailable.
   }
 }
 
@@ -39,6 +53,22 @@ function browserStorage() {
     return undefined
   }
 }
+
+type AuditState = { audits: AuditRun[] }
+
+export const selectAudits = (state: AuditState) => state.audits
+export const selectAuditById = (state: AuditState, id: string | undefined) =>
+  selectAudits(state).find(run => run.id === id)
+
+const fetchAuditOutcome = createAsyncThunk<'completed', AuditRun, { rejectValue: string }>(
+  'audits/fetchOutcome',
+  async (run, { rejectWithValue }) => {
+    const delay = Math.min(mockDuration, Math.max(0, run.finishesAt - Date.now()))
+    if (delay > 0) await new Promise<void>(resolve => setTimeout(resolve, delay))
+    if (run.simulateError) return rejectWithValue('Имитированный сбой')
+    return 'completed'
+  },
+)
 
 const auditsSlice = createSlice({
   name: 'audits',
@@ -61,21 +91,25 @@ const auditsSlice = createSlice({
         state.unshift(action.payload)
       },
     },
-    settleDue(state, action: PayloadAction<number>) {
-      for (const run of state) {
-        if (run.status === 'running' && run.finishesAt <= action.payload) {
-          run.status = run.simulateError ? 'failed' : 'completed'
-        }
-      }
-    },
   },
+  extraReducers: builder => builder
+    .addCase(fetchAuditOutcome.fulfilled, (state, action) => {
+      const run = state.find(run => run.id === action.meta.arg.id)
+      if (run?.status === 'running') run.status = action.payload
+    })
+    .addCase(fetchAuditOutcome.rejected, (state, action) => {
+      const run = state.find(run => run.id === action.meta.arg.id)
+      if (run?.status === 'running') run.status = 'failed'
+    }),
 })
 
-export const { start, settleDue } = auditsSlice.actions
+export const { start } = auditsSlice.actions
 
 export function createAppStore(storage: StorageAdapter | undefined = browserStorage()) {
+  const listener = createListenerMiddleware()
   const store = configureStore({
     reducer: { audits: auditsSlice.reducer },
+    middleware: getDefaultMiddleware => getDefaultMiddleware().prepend(listener.middleware),
     preloadedState: { audits: readRuns(storage) },
   })
 
@@ -84,13 +118,15 @@ export function createAppStore(storage: StorageAdapter | undefined = browserStor
     const current = store.getState().audits
     if (current === lastSaved) return
     lastSaved = current
-    try {
-      storage?.setItem(storageKey, JSON.stringify(current))
-    } catch {
-      // Keep the workspace usable when local storage is unavailable.
-    }
+    saveRuns(storage, current)
   })
-  store.dispatch(settleDue(Date.now()))
+  listener.startListening({
+    actionCreator: start,
+    effect: action => { void store.dispatch(fetchAuditOutcome(action.payload)) },
+  })
+  for (const run of selectAudits(store.getState())) {
+    if (run.status === 'running') void store.dispatch(fetchAuditOutcome(run))
+  }
   return store
 }
 

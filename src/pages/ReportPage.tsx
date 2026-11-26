@@ -2,7 +2,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { EmptyState, PageHeading, StatusBadge } from '../components/shared'
 import { auditPath, auditResult, formatAuditDate, scenarios, type AuditRun } from '../features/audits/model'
-import { start, useAppDispatch, useAppSelector } from '../features/audits/state'
+import { selectAuditById, start, useAppDispatch, useAppSelector } from '../features/audits/state'
 
 export function MissingPage({ audit = false }: { audit?: boolean }) {
   return <>
@@ -19,7 +19,7 @@ function ReportContent({ run }: { run: AuditRun }) {
   const navigate = useNavigate()
 
   function retry() {
-    const action = start({ agent: run.agent, scenario: run.scenario, simulateError: false })
+    const action = start({ agent: run.agent, scenario: run.scenario, endpoint: run.endpoint, description: run.description, vector: run.vector, criterion: run.criterion, simulateError: false })
     dispatch(action)
     navigate(auditPath(action.payload.id), { replace: true })
   }
@@ -38,6 +38,9 @@ function ReportContent({ run }: { run: AuditRun }) {
     </div>
     <button type="button" className="button primary" onClick={retry}><RefreshCw size={17} aria-hidden="true" />Повторить проверку</button>
   </div>
+
+  if (run.scenario === 'custom') return <EmptyState title="Критерий сохранён"
+    description="В демо-режиме собственный критерий не оценивается автоматически." />
 
   const result = auditResult(run.scenario)
 
@@ -68,7 +71,7 @@ function ReportContent({ run }: { run: AuditRun }) {
 
 export function ReportPage() {
   const { id } = useParams()
-  const run = useAppSelector(state => state.audits.find(item => item.id === id))
+  const run = useAppSelector(state => selectAuditById(state, id))
 
   if (!run) return <MissingPage audit />
 
@@ -77,6 +80,15 @@ export function ReportPage() {
     <PageHeading title={`Прогон · ${run.agent}`} description={scenarios[run.scenario].title}
       action={<StatusBadge status={run.status} />} />
     <p className="report-meta">Запущен <time dateTime={new Date(run.startedAt).toISOString()}>{formatAuditDate(run.startedAt)}</time></p>
+    {run.endpoint && <section className="panel report-summary configuration">
+      <h2>Настройки проверки</h2>
+      <dl>
+        <dt>Эндпоинт</dt><dd>{run.endpoint}</dd>
+        <dt>Описание агента</dt><dd>{run.description}</dd>
+        {run.vector && <><dt>Что проверить</dt><dd>{run.vector}</dd></>}
+        {run.criterion && <><dt>Критерий успеха</dt><dd>{run.criterion}</dd></>}
+      </dl>
+    </section>}
     <div aria-live="polite"><ReportContent run={run} /></div>
   </>
 }

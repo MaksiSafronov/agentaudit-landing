@@ -2,14 +2,14 @@ import { History, Plus, Search } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 import { AuditList, EmptyState, PageHeading } from '../components/shared'
 import { scenarios, statusLabels } from '../features/audits/model'
-import { useAppSelector } from '../features/audits/state'
+import { selectAudits, useAppSelector } from '../features/audits/state'
 
 export function HistoryPage() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
   const requestedStatus = params.get('status') ?? ''
   const status = Object.hasOwn(statusLabels, requestedStatus) ? requestedStatus : ''
-  const runs = useAppSelector(state => state.audits)
+  const runs = useAppSelector(selectAudits)
   const search = query.trim().toLocaleLowerCase('ru')
   const filtered = runs.filter(run => {
     const matches = [run.agent, scenarios[run.scenario].title].some(text => text.toLocaleLowerCase('ru').includes(search))

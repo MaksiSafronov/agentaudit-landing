@@ -2,12 +2,12 @@ import { ArrowRight, ClipboardCheck, Plus, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router'
 import { AuditList, EmptyState, PageHeading } from '../components/shared'
 import { auditPath, auditResult } from '../features/audits/model'
-import { useAppSelector } from '../features/audits/state'
+import { selectAudits, useAppSelector } from '../features/audits/state'
 
 export function OverviewPage() {
-  const runs = useAppSelector(state => state.audits)
+  const runs = useAppSelector(selectAudits)
   const completed = runs.filter(run => run.status === 'completed')
-  const latest = completed[0]
+  const latest = completed.find(run => run.scenario !== 'custom')
   const result = latest && auditResult(latest.scenario)
 
   return <>

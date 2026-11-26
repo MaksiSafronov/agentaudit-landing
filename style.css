@@ -1,3 +1,6 @@
+@import "./assets/fonts/headings.css";
+@import "./assets/brand-terminal.css";
+
 /* ==========================================================================
    AgentAudit landing
 
@@ -112,7 +115,8 @@ h1,
 h2,
 h3 {
   margin: 0;
-  font-weight: 600;
+  font-family: "Hacked", var(--font-sans);
+  font-weight: 400;
   line-height: 1.12;
   text-wrap: balance;
 }
@@ -251,11 +255,6 @@ header.site {
   font-weight: 700;
   letter-spacing: -0.01em;
   text-decoration: none;
-}
-
-.brand .mark {
-  color: var(--green);
-  text-shadow: var(--glow-green);
 }
 
 .nav-links {
@@ -1187,10 +1186,6 @@ footer.site {
   animation-delay: 0.6s;
 }
 
-.brand .mark {
-  animation: mark-flicker 6s steps(1) infinite;
-}
-
 .btn-primary {
   animation: pulse-glow 2.8s ease-in-out infinite;
 }
@@ -1331,13 +1326,6 @@ footer.site {
 @keyframes dot-pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.6); opacity: 0.55; }
-}
-
-@keyframes mark-flicker {
-  0%, 94%, 100% { opacity: 1; }
-  95% { opacity: 0.3; }
-  96% { opacity: 1; }
-  97% { opacity: 0.5; }
 }
 
 @keyframes pulse-glow {

@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { auditResult, scenarioIds, validateAudit } from './model'
-import { createAppStore, settleDue, start, storageKey } from './state'
+import { createAppStore, mockDuration, start, storageKey } from './state'
 
 function memoryStorage() {
   const contents = new Map<string, string>()
@@ -24,7 +24,7 @@ describe('валидация прогона', () => {
   it('использует согласованные результаты учебных сценариев', () => {
     for (const scenario of scenarioIds) {
       const result = auditResult(scenario)
-      expect(result.checks).toBeGreaterThan(0)
+      expect(result.checks).toBeGreaterThanOrEqual(0)
       expect(result.findings.length).toBeLessThanOrEqual(result.checks)
     }
     expect(auditResult('privacy').findings).toHaveLength(0)
@@ -32,28 +32,44 @@ describe('валидация прогона', () => {
 })
 
 describe('хранилище прогонов', () => {
-  it('восстанавливает ожидающие и завершённые прогоны', () => {
-    const storage = memoryStorage()
-    const initial = createAppStore(storage)
-    const success = initial.dispatch(start({ agent: '  Support  ', scenario: 'access', simulateError: false })).payload
-    const failure = initial.dispatch(start({ agent: 'Privacy', scenario: 'privacy', simulateError: true })).payload
-    const restored = createAppStore(storage)
-    const deadline = Math.max(success.finishesAt, failure.finishesAt)
+  it('восстанавливает ожидающие прогоны и сохраняет исходы асинхронных запросов', async () => {
+    vi.useFakeTimers()
+    try {
+      const storage = memoryStorage()
+      const initial = createAppStore(storage)
+      const success = initial.dispatch(start({ agent: '  Support  ', scenario: 'access', endpoint: 'https://example.com/chat', description: 'Support', simulateError: false })).payload
+      const failure = initial.dispatch(start({ agent: 'Privacy', scenario: 'privacy', endpoint: 'https://example.com/chat', description: 'Privacy', simulateError: true })).payload
+      const restoredStorage = memoryStorage()
+      restoredStorage.setItem(storageKey, storage.getItem(storageKey)!)
+      const restored = createAppStore(restoredStorage)
 
-    expect(restored.getState().audits.find(run => run.id === success.id)?.status).toBe('running')
-    restored.dispatch(settleDue(deadline))
+      expect(restored.getState().audits.find(run => run.id === success.id)?.status).toBe('running')
+      await vi.advanceTimersByTimeAsync(mockDuration)
 
-    expect(createAppStore(storage).getState().audits.slice(0, 2)).toEqual([
-      { ...failure, status: 'failed' },
-      { ...success, agent: 'Support', status: 'completed' },
-    ])
+      expect(createAppStore(restoredStorage).getState().audits.slice(0, 2)).toEqual([
+        { ...failure, status: 'failed' },
+        { ...success, status: 'completed' },
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
-  it('сохраняет пустую историю и восстанавливает демоданные при повреждённой записи', () => {
+  it('удаляет старые записи и сохраняет прогоны в новом формате', () => {
+    const storage = memoryStorage()
+    const legacy = { id: 'old', agent: 'Support', scenario: 'access', status: 'completed', simulateError: false, startedAt: 0, finishesAt: 1 }
+    const current = { ...legacy, id: 'new', endpoint: 'https://example.com/chat', description: 'Служба поддержки' }
+    const incomplete = { ...current, id: 'incomplete', scenario: 'custom', vector: 'Системный промпт' }
+    storage.setItem(storageKey, JSON.stringify([legacy, current, incomplete]))
+    expect(createAppStore(storage).getState().audits).toEqual([current])
+    expect(JSON.parse(storage.getItem(storageKey)!)).toEqual([current])
+  })
+
+  it('сохраняет пустую историю и оставляет её пустой при повреждённой записи', () => {
     const storage = memoryStorage()
     storage.setItem(storageKey, '[]')
     expect(createAppStore(storage).getState().audits).toEqual([])
     storage.setItem(storageKey, '{"broken":')
-    expect(createAppStore(storage).getState().audits.length).toBeGreaterThan(0)
+    expect(createAppStore(storage).getState().audits).toEqual([])
   })
 })

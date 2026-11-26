@@ -14,7 +14,7 @@ type Scenario = {
 
 export const scenarios = {
   instructions: {
-    title: 'Внутренние инструкции',
+    title: 'Системный промпт',
     description: 'Проверка того, какие сведения об инструкциях доступны в ответах агента.',
     checks: 8,
     findings: [{
@@ -36,16 +36,34 @@ export const scenarios = {
     }],
   },
   privacy: {
-    title: 'Персональные данные',
+    title: 'Пользовательские данные',
     description: 'Проверка обработки чувствительных полей на синтетических данных.',
     checks: 6,
+    findings: [],
+  },
+  language: {
+    title: 'Ругательства',
+    description: 'Проверка соблюдения требований к лексике.',
+    checks: 4,
+    findings: [],
+  },
+  general: {
+    title: 'Общая проверка',
+    description: 'Учебная сводка по системному промпту, пользовательским данным и лексике.',
+    checks: 0,
+    findings: [],
+  },
+  custom: {
+    title: 'Свой вариант',
+    description: 'Укажите, что проверить и какой результат считать успешным.',
+    checks: 0,
     findings: [],
   },
 } as const satisfies Record<string, Scenario>
 
 export type ScenarioId = keyof typeof scenarios
 export type AuditStatus = 'running' | 'completed' | 'failed'
-export type AuditInput = { agent: string; scenario: ScenarioId; simulateError: boolean }
+export type AuditInput = { agent: string; scenario: ScenarioId; simulateError: boolean; endpoint: string; description: string; vector?: string; criterion?: string }
 export type AuditRun = AuditInput & {
   id: string
   status: AuditStatus
@@ -67,8 +85,30 @@ export function validateAudit(agent: string, scenario: string) {
   }
 }
 
+export function validateConfiguration(endpoint: string, description: string, scenario: string, vector: string, criterion: string) {
+  let validEndpoint = false
+  try {
+    const url = new URL(endpoint.trim())
+    validEndpoint = ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password
+  } catch {
+    // An incomplete URL is invalid.
+  }
+  return {
+    endpoint: validEndpoint ? '' : 'Введите полный HTTP(S)-адрес без логина и пароля.',
+    description: description.trim() ? '' : 'Опишите, что умеет агент.',
+    vector: scenario === 'custom' && !vector.trim() ? 'Укажите, что проверить.' : '',
+    criterion: scenario === 'custom' && !criterion.trim() ? 'Укажите критерий успеха.' : '',
+  }
+}
+
 export function auditResult(scenario: ScenarioId): Scenario {
-  return scenarios[scenario]
+  if (scenario !== 'general') return scenarios[scenario]
+  const included: Scenario[] = [scenarios.instructions, scenarios.privacy, scenarios.language]
+  return {
+    ...scenarios.general,
+    checks: included.reduce((sum, item) => sum + item.checks, 0),
+    findings: included.flatMap(item => item.findings),
+  }
 }
 
 export const statusLabels: Record<AuditStatus, string> = {

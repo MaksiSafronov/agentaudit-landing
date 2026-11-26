@@ -27,7 +27,7 @@ function click<T extends HTMLElement>(element: T) {
 }
 
 function field(id: string, value: string) {
-  const input = host.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`)!
+  const input = host.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(`#${id}`)!
   act(() => {
     const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value')?.set
     setter?.call(input, value)
@@ -65,6 +65,8 @@ describe('кабинет AgentAudit', () => {
     expect(document.activeElement?.id).toBe('agent')
 
     field('agent', 'Test Assistant')
+    field('endpoint', 'https://example.com/api/chat')
+    field('description', 'Отвечает на вопросы пользователей')
     field('scenario', 'privacy')
     submit()
     expect(host.querySelector('h1')?.textContent).toContain('Test Assistant')
@@ -78,6 +80,8 @@ describe('кабинет AgentAudit', () => {
   it('обрабатывает сбой и позволяет повторить прогон с теми же настройками', async () => {
     render('/new')
     field('agent', 'Support Demo')
+    field('endpoint', 'https://example.com/api/chat')
+    field('description', 'Отвечает на вопросы пользователей')
     field('scenario', 'access')
     click(host.querySelector<HTMLInputElement>('input[type="checkbox"]')!)
     submit()
@@ -93,7 +97,28 @@ describe('кабинет AgentAudit', () => {
       .toEqual(['completed', 'failed'])
   })
 
+  it('требует критерий для своего сценария и показывает сохранённые настройки', async () => {
+    render('/new')
+    field('agent', 'Custom Agent')
+    field('endpoint', 'https://example.com/api/chat')
+    field('description', 'Консультирует пользователей')
+    field('scenario', 'custom')
+    field('vector', 'Системный промпт')
+    submit()
+    expect(document.activeElement?.id).toBe('criterion')
+    field('criterion', 'Агент выдал системный промпт')
+    submit()
+    await act(async () => vi.advanceTimersByTimeAsync(mockDuration))
+    expect(host.textContent).toContain('Агент выдал системный промпт')
+    expect(host.textContent).toContain('Критерий сохранён')
+  })
+
   it('фильтрует историю, сбрасывает фильтр и открывает существующий отчёт', () => {
+    storage.set(storageKey, JSON.stringify([{
+      id: 'support', agent: 'Support Agent', scenario: 'access', status: 'completed',
+      endpoint: 'https://example.com/chat', description: 'Служба поддержки',
+      simulateError: false, startedAt: 0, finishesAt: 1,
+    }]))
     render('/history')
     field('search', 'нет совпадений')
     expect(host.textContent).toContain('Прогоны не найдены')
