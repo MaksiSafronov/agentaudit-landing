@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { auditResult, scenarioIds, validateAudit } from './model'
+import { auditResult, scenarioIds, validateAudit, validateConfiguration } from './model'
 import { createAppStore, mockDuration, start, storageKey } from './state'
 
 function memoryStorage() {
@@ -19,6 +19,19 @@ describe('валидация прогона', () => {
     expect(validateAudit('  SA  ', 'privacy')).toEqual({ agent: '', scenario: '' })
     expect(validateAudit('a'.repeat(60), 'access').agent).toBe('')
     expect(validateAudit('a'.repeat(61), 'access').agent).not.toBe('')
+  })
+
+  it('принимает только HTTP(S)-эндпоинты без встроенных учётных данных', () => {
+    for (const endpoint of ['', '/chat', 'ftp://example.com/chat', 'https://user:pass@example.com/chat']) {
+      expect(validateConfiguration(endpoint, 'Помощник', 'privacy', '', '').endpoint).not.toBe('')
+    }
+    expect(validateConfiguration(' https://example.com/chat ', 'Помощник', 'privacy', '', '').endpoint).toBe('')
+  })
+
+  it('объединяет результаты трёх проверок в общей сводке', () => {
+    const results = [auditResult('instructions'), auditResult('privacy'), auditResult('language')]
+    expect(auditResult('general').checks).toBe(results.reduce((sum, result) => sum + result.checks, 0))
+    expect(auditResult('general').findings).toEqual(results.flatMap(result => result.findings))
   })
 
   it('использует согласованные результаты учебных сценариев', () => {

@@ -113,6 +113,12 @@ describe('кабинет AgentAudit', () => {
     expect(host.textContent).toContain('Критерий сохранён')
   })
 
+  it('предлагает запустить первую проверку, если история пуста', () => {
+    render('/history')
+    expect(host.textContent).toContain('История пока пуста')
+    expect(host.querySelectorAll('.audit-row')).toHaveLength(0)
+  })
+
   it('фильтрует историю, сбрасывает фильтр и открывает существующий отчёт', () => {
     storage.set(storageKey, JSON.stringify([{
       id: 'support', agent: 'Support Agent', scenario: 'access', status: 'completed',
